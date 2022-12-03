@@ -1,0 +1,23 @@
+---
+title: "Herrings Data Analysis"
+author: "Filip Szóstak"
+date: "`r Sys.Date()`"
+output:
+  html_document: 
+    toc: yes
+    toc_float: true   
+    theme: spacelab
+---
+
+```{r setup, include=FALSE, cache = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+set.seed(23)
+```
+
+```{r libraries, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(knitr)
+```
