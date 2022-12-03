@@ -5,8 +5,10 @@ date: "`r Sys.Date()`"
 output:
   html_document: 
     toc: yes
-    toc_float: true   
+    toc_float: yes
     theme: spacelab
+    number_sections: yes
+    df_print: kable
 ---
 
 ```{r setup, include=FALSE, cache = FALSE}
@@ -21,3 +23,15 @@ library(ggplot2)
 library(plotly)
 library(knitr)
 ```
+
+# Problem
+
+## Dataset origin
+
+## Provided data
+
+## Empty values
+
+# Analysis
+
+# Conclusions
