@@ -8,3 +8,6 @@ Its goal is to analyze the herrings dataset to find and present results like cor
 
 - `R`
 - `renv`
+
+## Demo
+Demo is avaliable [here](https://cheriit.github.io/herrings-data-analysis/).
