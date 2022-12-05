@@ -14,6 +14,7 @@ output:
 ```{r setup, include=FALSE, cache = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(cache = TRUE)
+knitr::opts_chunk$set(include = FALSE)
 set.seed(23)
 ```
 
@@ -24,14 +25,57 @@ library(plotly)
 library(knitr)
 ```
 
+# Executive summary 
+
 # Problem
 
-## Dataset origin
+Raport służy do analizy potencjalnych przyczyn stopniowego karłowacenia śledzi oceanicznych wyławianych w Europie.
 
-## Provided data
+## Źródło danych
 
-## Empty values
+Do analizy wykorzystano zbiór danych udostępniony przez prowadzącego na podstawie danych z połowów komercyjnych jednostek w przeciągu ostatnich 60 lat. Do analizy z połowu każdej jednostki wybierano między 50 a 100 sztuk trzyletnich śledzi. 
 
-# Analysis
+## Zbiór danych
+ 
+Zbiór składa się z następujących danych:
 
-# Conclusions
+- `length` - analizowana długość złowionego śledzia [cm]
+- `cfin1` - dostępność planktonu [zagęszczenie *Calanus finmarchicus* gat. 1];
+- `cfin2` - dostępność planktonu [zagęszczenie *Calanus finmarchicus* gat. 2];
+- `chel1` - dostępność planktonu [zagęszczenie *Calanus helgolandicus* gat. 1];
+- `chel2` - dostępność planktonu [zagęszczenie *Calanus helgolandicus* gat. 2];
+- `lcop1` - dostępność planktonu [zagęszczenie widłonogów gat. 1];
+- `lcop2` - dostępność planktonu [zagęszczenie widłonogów gat. 2];
+- `fbar` - natężenie połowów w regionie [ułamek pozostawionego narybku];
+- `recr` - roczny narybek [liczba śledzi];
+- `cumf` - łączne roczne natężenie połowów w regionie [ułamek pozostawionego narybku];
+- `totaln` - łączna liczba ryb złowionych w ramach połowu [liczba śledzi];
+- `sst` - temperatura przy powierzchni wody [°C];
+- `sal` - poziom zasolenia wody [Knudsen ppt];
+- `xmonth`-  miesiąc połowu [numer miesiąca];
+- `nao` - oscylacja północnoatlantycka [mb].
+
+```{r loading}
+data.df <- read.csv(
+  file = 'herrings.csv', 
+  quote = "", 
+  comment.char = "", 
+  na.strings="?",
+  colClasses = c("integer", rep("numeric", 8), "integer", rep("numeric", 4), "factor", "numeric")
+  )
+
+full.count <- nrow(data.df)
+
+df <- data.df[complete.cases(data.df),]
+reduced.count <- nrow(df)  
+```
+
+## Wartości puste
+
+W zbiorze danych pojawiają się braki wartości w przypadku kolumn: `cfin1`, `cfin2`, `chel1`, `chel2`, `lcop1`, `lcop2`, `sst`.
+Z uwagi na to, jesteśmy zmuszeni je odfiltrować, redukując ilość danych z `r full.count` do `r reduced.count` (`r round(reduced.count/full.count*100)`% danych jest pełnych). 
+
+
+# Analiza 
+
+# Wnioski

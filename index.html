@@ -11,7 +11,7 @@
 
 <meta name="author" content="Filip Szóstak" />
 
-<meta name="date" content="2022-12-03" />
+<meta name="date" content="2022-12-05" />
 
 <title>Herrings Data Analysis</title>
 
@@ -1511,28 +1511,70 @@ border-radius: 0px;
 
 <h1 class="title toc-ignore">Herrings Data Analysis</h1>
 <h4 class="author">Filip Szóstak</h4>
-<h4 class="date">2022-12-03</h4>
+<h4 class="date">2022-12-05</h4>
 
 </div>
 
 
-<div id="problem" class="section level1" number="1">
-<h1><span class="header-section-number">1</span> Problem</h1>
-<div id="dataset-origin" class="section level2" number="1.1">
-<h2><span class="header-section-number">1.1</span> Dataset origin</h2>
+<div id="executive-summary" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> Executive summary</h1>
 </div>
-<div id="provided-data" class="section level2" number="1.2">
-<h2><span class="header-section-number">1.2</span> Provided data</h2>
+<div id="problem" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Problem</h1>
+<p>Raport służy do analizy potencjalnych przyczyn stopniowego
+karłowacenia śledzi oceanicznych wyławianych w Europie.</p>
+<div id="źródło-danych" class="section level2" number="2.1">
+<h2><span class="header-section-number">2.1</span> Źródło danych</h2>
+<p>Do analizy wykorzystano zbiór danych udostępniony przez prowadzącego
+na podstawie danych z połowów komercyjnych jednostek w przeciągu
+ostatnich 60 lat. Do analizy z połowu każdej jednostki wybierano między
+50 a 100 sztuk trzyletnich śledzi.</p>
 </div>
-<div id="empty-values" class="section level2" number="1.3">
-<h2><span class="header-section-number">1.3</span> Empty values</h2>
+<div id="zbiór-danych" class="section level2" number="2.2">
+<h2><span class="header-section-number">2.2</span> Zbiór danych</h2>
+<p>Zbiór składa się z następujących danych:</p>
+<ul>
+<li><code>length</code> - analizowana długość złowionego śledzia
+[cm]</li>
+<li><code>cfin1</code> - dostępność planktonu [zagęszczenie <em>Calanus
+finmarchicus</em> gat. 1];</li>
+<li><code>cfin2</code> - dostępność planktonu [zagęszczenie <em>Calanus
+finmarchicus</em> gat. 2];</li>
+<li><code>chel1</code> - dostępność planktonu [zagęszczenie <em>Calanus
+helgolandicus</em> gat. 1];</li>
+<li><code>chel2</code> - dostępność planktonu [zagęszczenie <em>Calanus
+helgolandicus</em> gat. 2];</li>
+<li><code>lcop1</code> - dostępność planktonu [zagęszczenie widłonogów
+gat. 1];</li>
+<li><code>lcop2</code> - dostępność planktonu [zagęszczenie widłonogów
+gat. 2];</li>
+<li><code>fbar</code> - natężenie połowów w regionie [ułamek
+pozostawionego narybku];</li>
+<li><code>recr</code> - roczny narybek [liczba śledzi];</li>
+<li><code>cumf</code> - łączne roczne natężenie połowów w regionie
+[ułamek pozostawionego narybku];</li>
+<li><code>totaln</code> - łączna liczba ryb złowionych w ramach połowu
+[liczba śledzi];</li>
+<li><code>sst</code> - temperatura przy powierzchni wody [°C];</li>
+<li><code>sal</code> - poziom zasolenia wody [Knudsen ppt];</li>
+<li><code>xmonth</code>- miesiąc połowu [numer miesiąca];</li>
+<li><code>nao</code> - oscylacja północnoatlantycka [mb].</li>
+</ul>
+</div>
+<div id="wartości-puste" class="section level2" number="2.3">
+<h2><span class="header-section-number">2.3</span> Wartości puste</h2>
+<p>W zbiorze danych pojawiają się braki wartości w przypadku kolumn:
+<code>cfin1</code>, <code>cfin2</code>, <code>chel1</code>,
+<code>chel2</code>, <code>lcop1</code>, <code>lcop2</code>,
+<code>sst</code>. Z uwagi na to, jesteśmy zmuszeni je odfiltrować,
+redukując ilość danych z 52582 do 42488 (81% danych jest pełnych).</p>
 </div>
 </div>
-<div id="analysis" class="section level1" number="2">
-<h1><span class="header-section-number">2</span> Analysis</h1>
+<div id="analiza" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Analiza</h1>
 </div>
-<div id="conclusions" class="section level1" number="3">
-<h1><span class="header-section-number">3</span> Conclusions</h1>
+<div id="wnioski" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Wnioski</h1>
 </div>
 
 
