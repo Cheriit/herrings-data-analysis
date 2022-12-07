@@ -12,9 +12,8 @@ output:
 ---
 
 ```{r setup, include=FALSE, cache = FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(cache = TRUE)
-knitr::opts_chunk$set(include = FALSE)
 set.seed(23)
 ```
 
@@ -77,5 +76,87 @@ Z uwagi na to, jesteśmy zmuszeni je odfiltrować, redukując ilość danych z `
 
 
 # Analiza 
+
+## Podsumowanie danych
+
+```{r data_summary}
+kable(head(summary(df[,-c(1,15) ])))
+```
+
+## Szczegółowa analiza atrybutów
+
+### Długość
+
+```{r analysis_length}
+ggplot(df, aes(x=length)) +
+  geom_histogram(binwidth=0.5, fill="lightblue")
+```
+
+### Dostępność planktonów
+
+```{r analysis_plancton}
+ggplot(df, aes(x=cfin1)) +
+  geom_histogram(binwidth=1)
+```
+
+### Natężenia połowów
+
+```{r analysis_fbar}
+ggplot(df, aes(x=fbar)) +
+  geom_density()
+```
+
+### Roczny narybek
+
+```{r analysis_recr}
+ggplot(df, aes(x=recr)) +
+  geom_density()
+```
+
+### Roczne natężenie połowów w rejonie
+
+```{r analysis_cumf}
+ggplot(df, aes(x=cumf)) +
+  geom_density()
+```
+
+### Łączna liczb ryb złowionych w ramach połowu
+
+```{r analysis_totaln}
+ggplot(df, aes(x=totaln)) +
+  geom_density()
+```
+
+### Temperatura przy powierzchni wody
+
+```{r analysis_sst}
+ggplot(df, aes(x=sst)) +
+  geom_density()
+```
+
+### Poziom zasolenia wody
+
+```{r analysis_sal}
+ggplot(df, aes(x=sal)) +
+  geom_density()
+```
+
+### Miesiąc połowu
+
+```{r analysis_xmonth}
+ggplot(df, aes(x=xmonth)) +
+  geom_density()
+```
+
+### Oscylacja północnoatlantycka
+
+```{r analysis_nao}
+ggplot(df, aes(x=nao)) +
+  geom_density()
+```
+
+## Analiza korelacji między zmiennymi
+
+## Przewidywanie rozmiaru śledzia
 
 # Wnioski
