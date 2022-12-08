@@ -23,6 +23,7 @@ library(ggplot2)
 library(plotly)
 library(knitr)
 library(egg)
+library(tidyr)
 ```
 
 # Executive summary 
@@ -81,7 +82,9 @@ Z uwagi na to, jesteśmy zmuszeni je odfiltrować, redukując ilość danych z `
 ## Podsumowanie danych
 
 ```{r data_summary}
-kable(head(summary(df[,-c(1,15) ])))
+summarized_data <-summary(df[,-c(1,15) ])
+kable(head(summarized_data[, 1:7]))
+kable(head(summarized_data[, 8:14]))
 ```
 
 ## Szczegółowa analiza atrybutów
@@ -174,6 +177,26 @@ ggplot(df, aes(x=nao)) +
 
 ## Analiza korelacji między zmiennymi
 
+```{r correlation_chart}
+df %>%
+  sample_n(100) %>%
+  select(-c(X, xmonth)) %>%
+  gather("key", "value", c(-1)) %>%
+  ggplot(aes(x = value, y = length)) +
+    facet_wrap(. ~ key, scales = 'free') + 
+    geom_point() + 
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1))
+```
+
+```{r correlation_table}
+correlations = df %>%
+  select(-c(X, xmonth)) %>%
+  cor()
+
+kable(round(correlations[, 1:7], digits=2))
+kable(round(correlations[, 8:14], digits=2))
+
+```
 ## Przewidywanie rozmiaru śledzia
 
 # Wnioski
