@@ -4,16 +4,16 @@ author: "Filip Szóstak"
 date: "`r Sys.Date()`"
 output:
   html_document: 
+    self_contained: yes
     toc: yes
     toc_float: yes
     theme: spacelab
     number_sections: yes
     df_print: kable
 ---
-
+ 
 ```{r setup, include=FALSE, cache = FALSE}
 knitr::opts_chunk$set(echo = FALSE)
-knitr::opts_chunk$set(cache = TRUE)
 set.seed(23)
 ```
 
@@ -22,6 +22,7 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 library(knitr)
+library(egg)
 ```
 
 # Executive summary 
@@ -54,7 +55,7 @@ Zbiór składa się z następujących danych:
 - `xmonth`-  miesiąc połowu [numer miesiąca];
 - `nao` - oscylacja północnoatlantycka [mb].
 
-```{r loading}
+```{r loading, cache=TRUE}
 data.df <- read.csv(
   file = 'herrings.csv', 
   quote = "", 
@@ -86,24 +87,40 @@ kable(head(summary(df[,-c(1,15) ])))
 ## Szczegółowa analiza atrybutów
 
 ### Długość
+```{r analysis, cache=FALSE}
+present_variable <- function(data, column, binwidth, columnName) {
+  p1 <- ggplot(data, aes(x=column)) +
+    geom_histogram(aes(y=after_stat(density)), binwidth=binwidth, fill='lightblue', color=alpha('darkblue', 0.1)) + 
+    geom_density(color=alpha('black', 0.6)) + 
+    labs(x=columnName)
+  
+  p2 <- ggplot(data, aes(y=column)) +
+    geom_boxplot() + 
+    coord_flip() + 
+    labs(y=columnName) +
+    theme(
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank()
+      )
+  ggarrange(p1, p2, heights=c(3,1))
+}
+ 
+```
 
-```{r analysis_length}
-ggplot(df, aes(x=length)) +
-  geom_histogram(binwidth=0.5, fill="lightblue")
+```{r analysis_length, cache=FALSE}
+present_variable(df, df$length, binwidth = 0.5, 'length')
 ```
 
 ### Dostępność planktonów
 
 ```{r analysis_plancton}
-ggplot(df, aes(x=cfin1)) +
-  geom_histogram(binwidth=1)
+present_variable(df, df$cfin1, binwidth = 1, 'cfin1')
 ```
 
 ### Natężenia połowów
 
 ```{r analysis_fbar}
-ggplot(df, aes(x=fbar)) +
-  geom_density()
+present_variable(df, df$fbar, binwidth = 0.05, 'fbar')
 ```
 
 ### Roczny narybek
