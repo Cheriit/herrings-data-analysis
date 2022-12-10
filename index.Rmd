@@ -581,8 +581,11 @@ Jedynie silnie skorelowane są atrybuty związane z dostępnością glonów `che
 
 Ciekawą i jednocześnie racjonalną obserwacją jest zmiana współczynnika persona przy korelacji pomiędzy oscylacją północnoatlantycką oraz temperaturą na powierzchni wody w zależności od miesiąca. W tych zimowych, wartość ta potrafi być większa, czyniąc tą korelacje bardziej istotną. 
 
-Wszystkie modele w różnym stopniu zwróciły uwagę na istotność istnienia poszczególny rodzajów glonów, w szczególności na rodzaj `cfin1`, który może być konsumowany przez poszczególne gatunki śledzia. Wraz ze wzrostem pożywienia, rośnie potencjalna wielkość osobników danego gatunku.
+Wszystkie modele w różnym stopniu zwróciły uwagę na istotność istnienia poszczególny rodzajów glonów, w szczególności na rodzaj `cfin1`, który może być konsumowany przez poszczególne gatunki śledzia [1]. Wraz ze wzrostem pożywienia, rośnie potencjalna wielkość osobników danego gatunku.
 
 Kwestie temperatury nad powierzchnią wody również jest istotną kwestią w modelach, jednak przez brak informacji o roku pomiarów trudno jest przeanalizować kwestie zmiany tej temperatury przez lata, wraz ze zmianą temperatury globalnie przez procesty takie jak globalne ocieplenie.
 
 Ilość połowów jest również istotną kwestią braną przez modele pod uwagę. Część modeli poza samą ilością połowów uwzględnia ich natężenie. Na tej postawie można wysnuć hipotezę, że czym większe ich natężenie, tym mniej śledzi jest w stanie dorosnąć i osiągnąć pełną długość. Dodatkowo mniejsze śledzie mogą mieć odrobinę większą szansę na uniknięcie sieci rybackich, co powoduje, że w przyszłości będą w stanie urodzić kolejnych, również mniejszych osobników. 
+
+[1] Grieve, B.D., Hare, J.A. & Saba, V.S. Projecting the effects of climate change on Calanus finmarchicus distribution within the U.S. Northeast Continental Shelf. Sci Rep 7, 6264 (2017). https://doi.org/10.1038/s41598-017-06524-1
+
