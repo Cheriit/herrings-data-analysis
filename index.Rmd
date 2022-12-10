@@ -33,6 +33,13 @@ library(elasticnet)
 
 # Executive summary 
 
+Utworzenie dokładnego modelu pozawlającego na przewidzenie dokładnych długości śledzi jest niestety dość skomplikowane. 
+
+Mimo wszystko prace odnośnie utworzenia takiego raportu wykazały, że dane takie jak dostępność jedzenia dla śledzi, ilość i częstość połowów może mieć wpływ na wielkość śledzi w zbiornikach wodnych.
+
+Dodatkową kwestią która rzuciła się również w oczy w trakcie analizy jest temperatura nad powierzchnią wody. W przypadku posiadania danych historycznych, można byłoby przeprowadzić analizę odnośnie jej zmian w czasie na wielkość śledzi.  
+
+
 # Problem
 
 Raport służy do analizy potencjalnych przyczyn stopniowego karłowacenia śledzi oceanicznych wyławianych w Europie.
@@ -445,11 +452,11 @@ summer_correlation <- df %>%
 
 Ciekawą obserwacją jest fakt, że w miesiącach zimowych (listopad-luty), wartość korelacji jest większa od wartości w miesiącach letnich (czerwiec-sierpień): `r winter_correlation['sst', 'nao']` > `r summer_correlation['sst', 'nao']`.
 
-## Przewidywanie rozmiaru śledzia
+# Predykcja rozmiaru śledzia
 
 W naszej analizie przygotujemy 4 modele do przewidywania długości śledzi, na tych samych danych.
 
-### Dane
+## Dane
 ```{r prepare_data, cache=TRUE, include=FALSE}
 trainingIndex <- createDataPartition(y=df$length, p=0.75, list = FALSE)
 
@@ -466,11 +473,11 @@ Dane do uczenia dzielimy na 3 zbiory:
 - testowy - na którym będzie sprawdzana wydajność modelu (25% całego zbioru danych);
 - kontrolny - określony poprzez powtórną krosswalidacje z 2 iteracjami ponownego próbkowania oraz z 5 krotną ilością powtórzeń.
 
-### Linear Regression
+## Linear Regression
 ```{r model_lm, cache=TRUE}
 grid <- expand.grid(intercept = c(TRUE, FALSE))
 
-lm_fit <- train(length ~ ., data=training, method='lm', metric='rsquared', trControl=ctrl, preProc=c('center', 'scale'), tuneGrid = grid)
+lm_fit <- train(length ~ ., data=training, method='lm', metric='RMSE', trControl=ctrl, preProc=c('center', 'scale'), tuneGrid = grid)
 lm_fit
 ```
 
@@ -482,11 +489,11 @@ Najprostrzy z modeli, biorący pod wagę przede wszystkim parametr `fbar`, `cumf
 
 Tylko w nieznacznym stopniu uwzględnia niektóre miesiące czy niektóre rodzaje glonów, skupiając się bardziej na informacjach odnośnie wielkości połowów, ich częstotliwości oraz temperaturze wody. 
 
-### RIDGE
+## RIDGE
 ```{r model_ridge, cache=TRUE}
 grid <- expand.grid(lambda = seq(0, 5, length=20))
 
-ridge_fit <- train(length ~ ., data=training, method='ridge', metric='rsquared', trControl=ctrl, preProc=c('center', 'scale'), tuneGrid = grid)
+ridge_fit <- train(length ~ ., data=training, method='ridge', metric='RMSE', trControl=ctrl, preProc=c('center', 'scale'), tuneGrid = grid)
 ridge_fit
 ```
 
@@ -500,10 +507,10 @@ ggplotly(ggplot(varImp(ridge_fit)))
 
 Model ten w podobnym stopniu bierze pod uwagę parametry wszystkie parametry poza `cfin1` który jest znacznie mniej dla niego istotny oraz poza miesiącem, który jest przez niego kompletnie ignorowany.
 
-### LASSO
+## LASSO
 ```{r model_lasso, cache=TRUE, warning=FALSE}
 grid <- expand.grid(fraction = seq(0, 1, length=20))
-lasso_fit <- train(length ~ ., data=training, method='lasso', metric='rsquared', trControl=ctrl, preProc=c('center', 'scale'), tuneGrid = grid)
+lasso_fit <- train(length ~ ., data=training, method='lasso', metric='RMSE', trControl=ctrl, preProc=c('center', 'scale'), tuneGrid = grid)
 lasso_fit
 ```
 
@@ -517,10 +524,10 @@ ggplotly(ggplot(varImp(lasso_fit)))
 
 Model doszedł do podobnego wniosku jak poprzedni, biorąc pod uwagę parametry wszystkie parametry poza `cfin1` który jest znacznie mniej dla niego istotny oraz poza miesiącem, który jest przez niego kompletnie ignorowany.
 
-### Random Forest
+## Random Forest
 ```{r model_rf, cache=TRUE}
 grid <- expand.grid(mtry = 2:15)
-rf_fit <- train (length ~ ., data = training, method='rf', metric='rsquared', preProc=c('center', 'scale'), trControl=ctrl, tuneGrid = grid, ntree=15)
+rf_fit <- train (length ~ ., data = training, method='rf', metric='RMSE', preProc=c('center', 'scale'), trControl=ctrl, tuneGrid = grid, ntree=15)
 rf_fit
 ```
 
@@ -534,7 +541,7 @@ ggplotly(ggplot(varImp(rf_fit)))
 
 Model najbardziej zwrócił uwagę na parametr `sst`, `fbar` oraz `totaln`, czyli na parametry, które analogicznie, były istotne w pozostałych modelach.
 
-### Porównanie
+## Porównanie
 
 ```{r model_summary}
 models <- resamples(list(lm = lm_fit, ridge = ridge_fit, lasso=lasso_fit, rf=rf_fit))
@@ -561,6 +568,21 @@ Random forest:
 kable(postResample(predict(rf_fit, newdata=testing), testing$length))
 ```
 
-Porównując wyniki wszystkich 4 modeli, możemy zauważyć, że model regresji liniowej posiada najgorszą wartość RMSE oraz Rsquared. Najlepsze wartości natomiast prezentuje algorytm Random forest, który to osiąga znacznie lepsze wartości wszystkich parametrów testowych. Mimo wszystko wybrane modele nie mają w pełni satysfakcjonującej efektywności.
+Porównując wyniki wszystkich 4 modeli, możemy zauważyć, że model regresji liniowej posiada najgorszą wartość RMSE oraz Rsquared. Najlepsze wartości natomiast prezentuje algorytm Random forest, który to osiąga znacznie lepsze wartości wszystkich parametrów testowych. Mimo wszystko wybrane modele nie mają w pełni satysfakcjonującej efektywności. 
 
-# Wnioski
+## Wnioski
+
+Analiza oraz predykcja danych odnośnie długości śledzi nie daje jednoznacznych wyników.
+Różne metody predykcji pokazują, inne podejścia oraz priorytety związane z określeniem, co na takową długość może wpływać. Możliwe, że w przypadku dostępności  dodatkowych atrybutów, takich jak rok połowu, można byłoby osiągnąć odrobinę lepsze wyniki, gdyż aktualnie miesiąc nie jest wartością, która tak mocno wpływa na wyniki predykcji.
+
+Duża ilość zmiennych któRe zostały dostarczone nie posiada rozkładów, które można byłoby przybliżyć np rozkładem normalnym, ani nie posiada korelacji między sobą. 
+
+Jedynie silnie skorelowane są atrybuty związane z dostępnością glonów `chel1` oraz `lcop1`, `chel2` oraz `lcop2`, a także `fbar` i `cumf`.
+
+Ciekawą i jednocześnie racjonalną obserwacją jest zmiana współczynnika persona przy korelacji pomiędzy oscylacją północnoatlantycką oraz temperaturą na powierzchni wody w zależności od miesiąca. W tych zimowych, wartość ta potrafi być większa, czyniąc tą korelacje bardziej istotną. 
+
+Wszystkie modele w różnym stopniu zwróciły uwagę na istotność istnienia poszczególny rodzajów glonów, w szczególności na rodzaj `cfin1`, który może być konsumowany przez poszczególne gatunki śledzia. Wraz ze wzrostem pożywienia, rośnie potencjalna wielkość osobników danego gatunku.
+
+Kwestie temperatury nad powierzchnią wody również jest istotną kwestią w modelach, jednak przez brak informacji o roku pomiarów trudno jest przeanalizować kwestie zmiany tej temperatury przez lata, wraz ze zmianą temperatury globalnie przez procesty takie jak globalne ocieplenie.
+
+Ilość połowów jest również istotną kwestią braną przez modele pod uwagę. Część modeli poza samą ilością połowów uwzględnia ich natężenie. Na tej postawie można wysnuć hipotezę, że czym większe ich natężenie, tym mniej śledzi jest w stanie dorosnąć i osiągnąć pełną długość. Dodatkowo mniejsze śledzie mogą mieć odrobinę większą szansę na uniknięcie sieci rybackich, co powoduje, że w przyszłości będą w stanie urodzić kolejnych, również mniejszych osobników. 
