@@ -28,6 +28,7 @@ library(tidyr)
 library(gganimate)
 library(caret)
 library(randomForest)
+library(elasticnet)
 ```
 
 # Executive summary 
@@ -88,14 +89,14 @@ Z uwagi na to, jesteśmy zmuszeni je odfiltrować, redukując ilość danych z `
 Po redukcji wartości pustej pozostajemy ze zbiorem posiadającym `r reduced.count` rekordów. Poniżej znajduje się tabela zbierające wszystkie zmienne uwzględniane w analizie.
 
 ```{r data_summary}
+kable(head(df[, 1:7]))
+kable(head(df[, 8:14]))
 summarized_data <-summary(df[,-c(1,15) ])
 kable(head(summarized_data[, 1:7]))
 kable(head(summarized_data[, 8:14]))
 ```
 
-Na podstawie podsumowania wartości poszczególnych zmiennych zauważyć można, że:
-
-- `cfin1`, `cfin2`, `chel1`, `chel2`, `lcop1`, `lcop2`, `fbar`, `recr` mogą posiadać outlayery, które powodować mogą utrudnienia w analizie dalszych danych. Kwestia ta zostanie poruszona przy szczegółowej analizie parametrów.
+Na podstawie podsumowania wartości poszczególnych zmiennych zauważyć można, że `cfin1`, `cfin2`, `chel1`, `chel2`, `lcop1`, `lcop2`, `fbar`, `recr` mogą posiadać outlayery, które powodować mogą utrudnienia w analizie dalszych danych. Kwestia ta zostanie poruszona przy szczegółowej analizie parametrów.
 
 
 ## Szczegółowa analiza atrybutów
@@ -352,7 +353,7 @@ temperaturą przy powierzchni wody.
 
 #### Korelacja między `cfin2`, a `lcop2`
 
-```{r cfin2_lcop2_correlation, cache=TRUE}
+```{r cfin2_lcop2_correlation}
 plot.correlation(sample.df, sample.df$cfin2, sample.df$lcop2, 'cfin2', 'lcop2')
 ```
 
@@ -362,7 +363,7 @@ Możliwe, że poszczególne rodzaje glonów mają podobne wymagania, bądź koeg
 
 #### Korelacja między `chel1`, a `lcop1`
 
-```{r chel1_lcop1_correlation, cache=TRUE}
+```{r chel1_lcop1_correlation}
 plot.correlation(sample.df, sample.df$chel1, sample.df$lcop1, 'chel1', 'lcop1')
 ```
 
@@ -370,7 +371,7 @@ Na podstawie wykresu można zauważyć silną zależność pomiędzy parametrami
 
 #### Korelacja między `chel2`, a `lcop2`
 
-```{r chel2_lcop2_correlation, cache=TRUE}
+```{r chel2_lcop2_correlation}
 plot.correlation(sample.df, sample.df$chel2, sample.df$lcop2, 'chel2', 'lcop2')
 ```
 
@@ -378,7 +379,7 @@ Na podstawie wykresu można zauważyć silną zależność pomiędzy parametrami
 
 #### Korelacja między `fbar`, a `cumf`
 
-```{r fbar_cumf_correlation, cache=TRUE}
+```{r fbar_cumf_correlation}
 plot.correlation(sample.df, sample.df$fbar, sample.df$cumf, 'fbar', 'cumf')
 ```
 
@@ -388,7 +389,7 @@ Zależność pomiędzy natężeniem połowów w regionie oraz łącznym natęże
 
 #### Korelacja między `fbar`, a `totaln`
 
-```{r fbar_totaln_correlation, cache=TRUE}
+```{r fbar_totaln_correlation}
 plot.correlation(sample.df, sample.df$fbar, sample.df$totaln, 'fbar', 'totaln')
 ```
 
@@ -399,7 +400,7 @@ Zależność pomiędzy natężeniem połowów w regionie oraz łączną liczbą 
 
 #### Korelacja między `cumf`, a `totaln`
 
-```{r cumf_totaln_correlation, cache=TRUE}
+```{r cumf_totaln_correlation}
 plot.correlation(sample.df, sample.df$cumf, sample.df$totaln, 'cumf', 'totaln')
 ```
 
@@ -409,7 +410,7 @@ Zależność pomiędzy natężeniem połowów w regionie oraz łączną liczbą 
 
 #### Korelacja między `sst`, a `nao`
 
-```{r sst_nao_correlation, cache=TRUE}
+```{r sst_nao_correlation}
 plot.correlation(sample.df, sample.df$sst, sample.df$nao, 'sst', 'nao')
 ```
 
@@ -431,7 +432,7 @@ animate(p, fps=3)
 ```
 
 
-```{r sst_cors}
+```{r sst_cors, cache=TRUE}
 winter_correlation <- df %>%
   filter(xmonth < 3 | xmonth > 11) %>%
   select(sst, nao) %>%
@@ -442,24 +443,124 @@ summer_correlation <- df %>%
   cor()
 ```
 
-Ciekawą obserwacją jest fakt, że w miesiącach zimowych (listopad-luty), wartość korelacji jest większa od wartości w miesiącach letnich (czerwiec-sierpień) `r winter_correlation['sst', 'nao']` > `r summer_correlation['sst', 'nao']`.
+Ciekawą obserwacją jest fakt, że w miesiącach zimowych (listopad-luty), wartość korelacji jest większa od wartości w miesiącach letnich (czerwiec-sierpień): `r winter_correlation['sst', 'nao']` > `r summer_correlation['sst', 'nao']`.
 
 ## Przewidywanie rozmiaru śledzia
 
-```{r train, cache=TRUE, include=FALSE}
+W naszej analizie przygotujemy 4 modele do przewidywania długości śledzi, na tych samych danych.
+
+### Dane
+```{r prepare_data, cache=TRUE, include=FALSE}
 trainingIndex <- createDataPartition(y=df$length, p=0.75, list = FALSE)
 
-data <- df %>% select(length, sal)
+data <- df %>% mutate(xmonth=factor(xmonth)) %>% select(-X)
 
 training <- data[trainingIndex,]
 testing <- data[-trainingIndex,]
-rfGrid <- expand.grid(mtry = 10:30)
 ctrl <- trainControl(method="repeatedcv", number=2, repeats=5)
-fit <- train (length ~ ., data = training, method='rf', trControl=ctrl, tuneGrid = rfGrid, ntree=30)
 ```
 
-```{r prediction}
-rfClasses <- predict(fit, newdata=testing)
+Dane do uczenia dzielimy na 3 zbiory:
+
+- treningowy - na którym odbędzie się uczenie (75% całego zbioru danych);
+- testowy - na którym będzie sprawdzana wydajność modelu (25% całego zbioru danych);
+- kontrolny - określony poprzez powtórną krosswalidacje z 2 iteracjami ponownego próbkowania oraz z 5 krotną ilością powtórzeń.
+
+### Linear Regression
+```{r model_lm, cache=TRUE}
+grid <- expand.grid(intercept = c(TRUE, FALSE))
+
+lm_fit <- train(length ~ ., data=training, method='lm', metric='rsquared', trControl=ctrl, preProc=c('center', 'scale'), tuneGrid = grid)
+lm_fit
 ```
+
+```{r model_lm_variabvles}
+ggplotly(ggplot(varImp(lm_fit)))
+```
+
+Najprostrzy z modeli, biorący pod wagę przede wszystkim parametr `fbar`, `cumf` oraz `sst`, a w następnej kolejności wartości związanie z niektórymi glonami i miesiącami. 
+
+Tylko w nieznacznym stopniu uwzględnia niektóre miesiące czy niektóre rodzaje glonów, skupiając się bardziej na informacjach odnośnie wielkości połowów, ich częstotliwości oraz temperaturze wody. 
+
+### RIDGE
+```{r model_ridge, cache=TRUE}
+grid <- expand.grid(lambda = seq(0, 5, length=20))
+
+ridge_fit <- train(length ~ ., data=training, method='ridge', metric='rsquared', trControl=ctrl, preProc=c('center', 'scale'), tuneGrid = grid)
+ridge_fit
+```
+
+```{r model_ridge_visualisation}
+ggplotly(ggplot(ridge_fit))
+```
+
+```{r model_ridge_variabvles}
+ggplotly(ggplot(varImp(ridge_fit)))
+```
+
+Model ten w podobnym stopniu bierze pod uwagę parametry wszystkie parametry poza `cfin1` który jest znacznie mniej dla niego istotny oraz poza miesiącem, który jest przez niego kompletnie ignorowany.
+
+### LASSO
+```{r model_lasso, cache=TRUE, warning=FALSE}
+grid <- expand.grid(fraction = seq(0, 1, length=20))
+lasso_fit <- train(length ~ ., data=training, method='lasso', metric='rsquared', trControl=ctrl, preProc=c('center', 'scale'), tuneGrid = grid)
+lasso_fit
+```
+
+```{r model_lasso_visualisation}
+ggplotly(ggplot(lasso_fit))
+```
+
+```{r model_lasso_variabvles}
+ggplotly(ggplot(varImp(lasso_fit)))
+```
+
+Model doszedł do podobnego wniosku jak poprzedni, biorąc pod uwagę parametry wszystkie parametry poza `cfin1` który jest znacznie mniej dla niego istotny oraz poza miesiącem, który jest przez niego kompletnie ignorowany.
+
+### Random Forest
+```{r model_rf, cache=TRUE}
+grid <- expand.grid(mtry = 2:15)
+rf_fit <- train (length ~ ., data = training, method='rf', metric='rsquared', preProc=c('center', 'scale'), trControl=ctrl, tuneGrid = grid, ntree=15)
+rf_fit
+```
+
+```{r model_rf_visualisation}
+ggplotly(ggplot(rf_fit))
+```
+
+```{r model_rf_variabvles}
+ggplotly(ggplot(varImp(rf_fit)))
+```
+
+Model najbardziej zwrócił uwagę na parametr `sst`, `fbar` oraz `totaln`, czyli na parametry, które analogicznie, były istotne w pozostałych modelach.
+
+### Porównanie
+
+```{r model_summary}
+models <- resamples(list(lm = lm_fit, ridge = ridge_fit, lasso=lasso_fit, rf=rf_fit))
+summary(models)
+```
+
+Regresja liniowa:
+```{r lm_summary}
+kable(postResample(predict(lm_fit, newdata=testing), testing$length))
+```
+
+RIDGE:
+```{r ridge_summary}
+kable(postResample(predict(ridge_fit, newdata=testing), testing$length))
+```
+
+LASSO:
+```{r lasso_summary}
+kable(postResample(predict(lasso_fit, newdata=testing), testing$length))
+```
+
+Random forest:
+```{r rf_summary}
+kable(postResample(predict(rf_fit, newdata=testing), testing$length))
+```
+
+Porównując wyniki wszystkich 4 modeli, możemy zauważyć, że model regresji liniowej posiada najgorszą wartość RMSE oraz Rsquared. Najlepsze wartości natomiast prezentuje algorytm Random forest, który to osiąga znacznie lepsze wartości wszystkich parametrów testowych. Mimo wszystko wybrane modele nie mają w pełni satysfakcjonującej efektywności.
 
 # Wnioski
