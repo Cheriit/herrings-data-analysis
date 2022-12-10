@@ -575,7 +575,7 @@ Porównując wyniki wszystkich 4 modeli, możemy zauważyć, że model regresji 
 Analiza oraz predykcja danych odnośnie długości śledzi nie daje jednoznacznych wyników.
 Różne metody predykcji pokazują, inne podejścia oraz priorytety związane z określeniem, co na takową długość może wpływać. Możliwe, że w przypadku dostępności  dodatkowych atrybutów, takich jak rok połowu, można byłoby osiągnąć odrobinę lepsze wyniki, gdyż aktualnie miesiąc nie jest wartością, która tak mocno wpływa na wyniki predykcji.
 
-Duża ilość zmiennych któRe zostały dostarczone nie posiada rozkładów, które można byłoby przybliżyć np rozkładem normalnym, ani nie posiada korelacji między sobą. 
+Duża ilość zmiennych które zostały dostarczone nie posiada rozkładów, które można byłoby przybliżyć np rozkładem normalnym, ani nie posiada korelacji między sobą. 
 
 Jedynie silnie skorelowane są atrybuty związane z dostępnością glonów `chel1` oraz `lcop1`, `chel2` oraz `lcop2`, a także `fbar` i `cumf`.
 
