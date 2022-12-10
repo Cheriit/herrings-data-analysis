@@ -14,6 +14,7 @@ output:
  
 ```{r setup, include=FALSE, cache = FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.align = "center")
 set.seed(23)
 ```
 
@@ -24,6 +25,9 @@ library(plotly)
 library(knitr)
 library(egg)
 library(tidyr)
+library(gganimate)
+library(caret)
+library(randomForest)
 ```
 
 # Executive summary 
@@ -62,7 +66,7 @@ data.df <- read.csv(
   quote = "", 
   comment.char = "", 
   na.strings="?",
-  colClasses = c("integer", rep("numeric", 8), "integer", rep("numeric", 4), "factor", "numeric")
+  colClasses = c("integer", rep("numeric", 8), "integer", rep("numeric", 4), "integer", "numeric")
   )
 
 full.count <- nrow(data.df)
@@ -81,21 +85,30 @@ Z uwagi na to, jesteśmy zmuszeni je odfiltrować, redukując ilość danych z `
 
 ## Podsumowanie danych
 
+Po redukcji wartości pustej pozostajemy ze zbiorem posiadającym `r reduced.count` rekordów. Poniżej znajduje się tabela zbierające wszystkie zmienne uwzględniane w analizie.
+
 ```{r data_summary}
 summarized_data <-summary(df[,-c(1,15) ])
 kable(head(summarized_data[, 1:7]))
 kable(head(summarized_data[, 8:14]))
 ```
 
+Na podstawie podsumowania wartości poszczególnych zmiennych zauważyć można, że:
+
+- `cfin1`, `cfin2`, `chel1`, `chel2`, `lcop1`, `lcop2`, `fbar`, `recr` mogą posiadać outlayery, które powodować mogą utrudnienia w analizie dalszych danych. Kwestia ta zostanie poruszona przy szczegółowej analizie parametrów.
+
+
 ## Szczegółowa analiza atrybutów
 
+W tej sekcji zostanie przeprowadzona szczegółowa analiza poszczególnych analizowanych atrybutów. W przypadku wykresu histogramu wraz z gęstością, wartość na osi Y ukazuje gęstość prawdopodobieństwa. Histogram został dodany poglądowo. 
+
 ### Długość
-```{r analysis, cache=FALSE}
+```{r analysis, cache=TRUE}
 present_variable <- function(data, column, binwidth, columnName) {
   p1 <- ggplot(data, aes(x=column)) +
     geom_histogram(aes(y=after_stat(density)), binwidth=binwidth, fill='lightblue', color=alpha('darkblue', 0.1)) + 
     geom_density(color=alpha('black', 0.6)) + 
-    labs(x=columnName)
+    labs(x=columnName, y='Gęstość', title=paste('Rozkład parametru', columnName))
   
   p2 <- ggplot(data, aes(y=column)) +
     geom_boxplot() + 
@@ -105,98 +118,348 @@ present_variable <- function(data, column, binwidth, columnName) {
       axis.text.y = element_blank(),
       axis.ticks.y = element_blank()
       )
-  ggarrange(p1, p2, heights=c(3,1))
+  ggarrange(
+    p1, p2, 
+    heights=c(3,1)
+  )
 }
  
 ```
 
-```{r analysis_length, cache=FALSE}
+```{r analysis_length, cache=TRUE}
 present_variable(df, df$length, binwidth = 0.5, 'length')
 ```
 
+Na podstawie powyższych wykresów zauważyć można, że długość śledzi przypomina rozkład normalny. Z tego powodu przeprowadzono test shapiro, żeby sprawdzić to założenie. 
+
+```{r length_shapiro, cache=TRUE}
+shapiro.test(sample_n(df, 500)$length)
+```
+
+Na podstawie wyników testu można założyć normalność rozkładu parametru długości. 
+
+Nie zawiera on outlayerów, które potencjalnie mogłyby powodować trudności przy dalszej analizie, skupiając się w okolicach wartości `r median(df$length)`.
+
+Ciekawą obserwacją, którą zauważyć można dopiero przy analizie gęstości prawdopodobieństwa jest fakt, iż większe istnieje większe prawdopodobieństwo wartości "pełnych" niż po przecinku. Może się to wiązać z faktem, że dane odnośnie długości mogą być spisywane przez ludzi czasem w systemie pełnych wartości, a czasem po ich zaokrągleniu.
+
+```{r length_animated_chart, cache=TRUE}
+p <- df %>%
+  ggplot(
+    aes(x=length)
+  ) + 
+  geom_histogram(binwidth=0.5, fill='lightblue', color=alpha('darkblue', 0.1)) + 
+  transition_time(xmonth) + 
+  labs(title = "Month: {frame_time}")
+animate(p, fps=10)
+```
+
+```{r length_mean}
+df %>%
+  group_by(xmonth) %>%
+  summarize(mean_length = mean(length)) %>%
+  kable()
+```
+
+Na podstawie wykresu można zauważyć, że zdarzają się miesiące jak luty i marzec, gdzie średnia długość złapanych ryb potrafi być delikatnie niższa niż w pozostałych, gdzie średnia długość ryb wynosi w trakcie całego roku `r round(mean(df$length), digits=2)`cm. Za to najdłuższa średnia długość występuje w czerwcu.
+
 ### Dostępność planktonów
 
-```{r analysis_plancton}
-present_variable(df, df$cfin1, binwidth = 1, 'cfin1')
+Przy wszystkich tych parametrach zauważyć można wartości odstające, które na rzecz szczegółowej analizy jesteśmy zmuszeni porzucić. Są to zazwyczaj pojedyncze odczyty znacznie odstające od wszystkich innych.
+
+#### `Cfin1`
+
+Z uwagi na pojedynczą wartość silnie odstającą w porównaniu do pozostałych, w celu poprawnej analizy jesteśmy zmuszeni do pozbycia się tej pojedynczej wartości odstającej mającej wartość `r max(df$cfin1)`.
+
+```{r cfin1_outlayer, cache=TRUE}
+df <- df %>% filter(cfin1 < max(cfin1))
 ```
+
+
+```{r cfin1_analysis, cache=TRUE}
+present_variable(df, df$cfin1, binwidth = 0.2, 'cfin1')
+```
+
+Zauważyć można, że wartości tego parametru bardzo silnie skupiają się do okoła wartości `r median(df$cfin1)`, jednak wciąż pojawiają się wartości przekraczające 0.75.
+
+#### `Cfin2`
+
+```{r cfin2_analysis, cache=TRUE}
+present_variable(df, df$cfin2, binwidth = 0.5, 'cfin2')
+```
+
+Zauważyć można, że wartości tego parametru bardzo silnie skupiają się do okoła wartości `r median(df$cfin2)`. Mimo to, pojawiają się przypadki, gdzie zaobserwować można odczyty z wartościami powyżej 10, jendak z uwagi, że nie są to pojedyncze odczyty, pozostawiamy je w naszej analizie.
+
+#### `chel1`
+
+```{r chel1_analysis, cache=TRUE}
+df <- df %>% filter(chel1 < max(chel1))
+present_variable(df, df$chel1, binwidth = 2, 'chel1')
+```
+
+Zauważyć można, że wartości tego parametru bardzo silnie skupiają się do okoła wartości `r median(df$chel1)`. Zauważyć jednak można odczyty powyżej wartości 20, które mogą być istotne na naszą analizę. Wyjątkiem jest pojedynczy odczyt wartości maksymalnej w naszej analizie.
+
+#### `chel2`
+
+```{r chel2_analysis, cache=TRUE}
+df <- df %>% filter(chel2 < max(chel2))
+present_variable(df, df$chel2, binwidth = 2, 'chel2')
+```
+
+Zauważyć można, że rozkład tego parametru jest stosunkowo mocno rozłożony, nie gromadząc się tak bardzo do okoła jednej wartości. Z uwagi na pojedynczą, odstającą wartość maksymalną byliśmy zmuszeni do usunięcia tego odczytu.
+
+
+#### `lcop1`
+
+```{r lcop1_analysis, cache=TRUE}
+present_variable(df, df$lcop1, binwidth = 2, 'lcop1')
+```
+
+Zauważyć można, że rozkład parametru nie skupia się do okoła jednej wartości tak mocno, jednak posiada tendencje do osiągania wartości bliskiej 3. Atrybut ten jest w stanie dość często osiągać wartości powyżej 20.
+
+#### `lcop2`
+
+```{r lcop2_analysis, cache=TRUE}
+present_variable(df, df$lcop2, binwidth = 3, 'lcop2')
+```
+
+Zauważyć można, że rozkład parametru miewa tendencje do gromadzenia się w około wartości 24. Zdarzają się jednak sytuacje, gdzie odczyty wynoszą powyżej 40.
 
 ### Natężenia połowów
 
-```{r analysis_fbar}
+```{r analysis_fbar, cache=TRUE}
 present_variable(df, df$fbar, binwidth = 0.05, 'fbar')
 ```
 
+Połowy zwyczajowo pozostawiają `r median(df$fbar)`% narybku. Zdarzają się jednak sytuacje, gdzie wartość ta w stopniu znacznym przekracza 50%. 
+
 ### Roczny narybek
 
-```{r analysis_recr}
-ggplot(df, aes(x=recr)) +
-  geom_density()
-```
+```{r analysis_recr, cache=TRUE}
+present_variable(df, df$recr, binwidth = 100000, 'recr')
+``` 
+
+Przeciętny roczny połów gromadzi się zwyczajowo w okolicach wartości `r median(df$fbar)`. Zdarzaja się jednak roczne połowy ponad 3x większe od tych przeciętnych, jednak przypadki powyżej 1.000.000 występują znacznie rzadziej.
 
 ### Roczne natężenie połowów w rejonie
 
-```{r analysis_cumf}
-ggplot(df, aes(x=cumf)) +
-  geom_density()
+```{r analysis_cumf, cache=TRUE}
+present_variable(df, df$cumf, binwidth = 0.02, 'cumf')
 ```
+
+Łączne roczne natężenie połowów w regionie jest znacznie bardziej rozłożone między wartościami 0 a 0.4. Jest to wartość dość szeroko rozłożona między tymi wartościami, bez wartości do około której gromadzą się najczęstrze odczyty. 
 
 ### Łączna liczb ryb złowionych w ramach połowu
 
-```{r analysis_totaln}
-ggplot(df, aes(x=totaln)) +
-  geom_density()
+```{r analysis_totaln, cache=TRUE}
+present_variable(df, df$totaln, binwidth = 80000, 'totaln')
 ```
+
+Łączna liczba ryb złowionych w ramach połowu rozkłąda się stosunkowo równo w całym przedziale, od 80.000 do 800.000. Mimo tego, pojawiają się pojedyncze połowy z ponad 1.000.000 złowionymi rybami
 
 ### Temperatura przy powierzchni wody
 
-```{r analysis_sst}
-ggplot(df, aes(x=sst)) +
-  geom_density()
+```{r analysis_sst, cache=TRUE}
+present_variable(df, df$sst, binwidth = 0.2, 'sst')
 ```
+
+Temperatura przy powierzchni zwyczajowo osiąga wartości w okolicach 14 stopni celsjusza. Mimo to pojawiają się odczyty, gdy osiąga wartości poniżej 13 stopni. 
 
 ### Poziom zasolenia wody
 
-```{r analysis_sal}
-ggplot(df, aes(x=sal)) +
-  geom_density()
+```{r analysis_sal, cache=TRUE}
+present_variable(df, df$sal, binwidth = 0.01, 'sal')
 ```
+
+Poziom zasolenia wody gromadzi się bardzo mocno do okoła wartości `r median(df$sal)`. Wszystkie jednak odczyty znajdują się w przedziale między 35.35% a 35.7%. Odczylenia od wartości centralnej są nieznaczne. 
 
 ### Miesiąc połowu
 
-```{r analysis_xmonth}
+```{r analysis_xmonth, cache=TRUE}
 ggplot(df, aes(x=xmonth)) +
-  geom_density()
+  geom_histogram(binwidth=1, fill='lightblue', color=alpha('darkblue', 0.1)) + 
+  labs(title='Rozkład parametru xmonth') + 
+  scale_x_continuous(labels=function(x) {month.abb[x]}, breaks=1:12)
 ```
+
+Najmniej pomiarów zostało wykonanych zimą, a najwięcej w okresie letnio-jesiennym. W pozostałych miesiącach ilość pomiarów jest na poziomie ok 2000.
 
 ### Oscylacja północnoatlantycka
 
-```{r analysis_nao}
-ggplot(df, aes(x=nao)) +
-  geom_density()
+```{r analysis_nao, cache=TRUE}
+present_variable(df, df$nao, binwidth = 0.5, 'nao')
 ```
+
+Wartość oscylacji północnoatlantyckiej rozkłada się stosunkowo równo między wartościami -3, a 2.5, jednak zdarzają się pojedyncze odczyty, gdzie parametr ten osiąga wartość bliską 5.0.
 
 ## Analiza korelacji między zmiennymi
 
-```{r correlation_chart}
-df %>%
-  sample_n(100) %>%
-  select(-c(X, xmonth)) %>%
-  gather("key", "value", c(-1)) %>%
-  ggplot(aes(x = value, y = length)) +
-    facet_wrap(. ~ key, scales = 'free') + 
-    geom_point() + 
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1))
-```
+Poniżej znajduje się tabela zawierające współczynniki korelacji pearsona.
 
 ```{r correlation_table}
 correlations = df %>%
   select(-c(X, xmonth)) %>%
-  cor()
+  cor() %>%
+  round(digits=2)
 
-kable(round(correlations[, 1:7], digits=2))
-kable(round(correlations[, 8:14], digits=2))
+kable(correlations[, 1:7])
+kable(correlations[, 8:14])
 
 ```
+
+Na podstawie danych można dojrzeć silniejsze związki (z wartością współczynnika korelacji pearsona powyżej 0.5, bądź poniżej -0.5) pomiędzy następującymi wartościami:
+
+- **`cfin2`** oraz **`lcop2`**: *`r correlations['cfin2', 'lcop2']`*
+- **`chel1`** oraz **`lcop1`**: *`r correlations['chel1', 'lcop1']`*
+- **`chel2`** oraz **`lcop2`**: *`r correlations['chel2', 'lcop2']`*
+- **`fbar`** oraz **`cumf`**: *`r correlations['fbar', 'cumf']`*
+- **`fbar`** oraz **`totaln`**: *`r correlations['fbar', 'totaln']`*
+- **`cumf`** oraz **`totaln`**: *`r correlations['cumf', 'totaln']`*
+- **`sst`** oraz **`nao`**: *`r correlations['sst', 'nao']`*
+
+### Szczegółowa analiza korelacji pomiędzy poszczególnymi zmiennymi
+
+W tym punkcie w celu uproszczenia wizualizacji, ograniczamy zbiór wartości do 200 losowo wybranych wartości, w celu lepszej widoczności na wykresie.
+
+```{r sample, cache=TRUE}
+sample.df <-sample_n(df, 200)
+```
+
+```{r correlation_plot, cache=TRUE}
+plot.correlation <- function(data, x_column, y_column, x_label, y_label) {
+  p <- ggplot(data, aes(x = x_column, y = y_column)) +
+    geom_point() +
+    geom_smooth(formula = y ~ x, method='lm') + 
+    labs(x = x_label, y = y_label)
+  ggplotly(p)
+}
+
+```
+#### Korelacja z długością
+
+```{r length_correlation_chart, cache=TRUE, fig.height=15}
+sample.df %>%
+  select(-c(X)) %>%
+  gather("key", "value", c(-1, -14)) %>%
+  ggplot(aes(x = value, y = length, color=xmonth)) +
+    facet_wrap(. ~ key, scales = 'free', ncol=3) + 
+    geom_point() + 
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1))
+```
+
+Zgodnie oczekiwaniami na podstawie wartości z macierzy korelacji, żadna ze zmiennycyh nie przejawia silnej korelacji z długością śledzi. Zauważyć jednak można słabą, odwrotnie proporcjonalną zależność pomiędzy długością, a 
+temperaturą przy powierzchni wody. 
+
+
+#### Korelacja między `cfin2`, a `lcop2`
+
+```{r cfin2_lcop2_correlation, cache=TRUE}
+plot.correlation(sample.df, sample.df$cfin2, sample.df$lcop2, 'cfin2', 'lcop2')
+```
+
+Na podstawie wykresu zauważyć można delikatną zależność pomiędzy parametrami. Nie jest to jednak bardzo istotna zależność.
+
+Możliwe, że poszczególne rodzaje glonów mają podobne wymagania, bądź koegzystują one w środowisku naturalnym, co tyczy się kolejnych 2 rozważanych zależności.
+
+#### Korelacja między `chel1`, a `lcop1`
+
+```{r chel1_lcop1_correlation, cache=TRUE}
+plot.correlation(sample.df, sample.df$chel1, sample.df$lcop1, 'chel1', 'lcop1')
+```
+
+Na podstawie wykresu można zauważyć silną zależność pomiędzy parametrami. Jest ona bliska zależności liniowej. 
+
+#### Korelacja między `chel2`, a `lcop2`
+
+```{r chel2_lcop2_correlation, cache=TRUE}
+plot.correlation(sample.df, sample.df$chel2, sample.df$lcop2, 'chel2', 'lcop2')
+```
+
+Na podstawie wykresu można zauważyć silną zależność pomiędzy parametrami. Jest ona bliska zależności liniowej. 
+
+#### Korelacja między `fbar`, a `cumf`
+
+```{r fbar_cumf_correlation, cache=TRUE}
+plot.correlation(sample.df, sample.df$fbar, sample.df$cumf, 'fbar', 'cumf')
+```
+
+Na podstawie wykresu można zauważyć średnią zależność pomiędzy parametrami.
+
+Zależność pomiędzy natężeniem połowów w regionie oraz łącznym natężeniem połowów w regionie oznacza, że zazwyczaj wzrosty połowów w poszczególnych regionach mogą rosnąć w miarę proporcjonalnie. 
+
+#### Korelacja między `fbar`, a `totaln`
+
+```{r fbar_totaln_correlation, cache=TRUE}
+plot.correlation(sample.df, sample.df$fbar, sample.df$totaln, 'fbar', 'totaln')
+```
+
+Na podstawie wykresu można zauważyć średnia zależność pomiędzy parametrami.
+
+Zależność pomiędzy natężeniem połowów w regionie oraz łączną liczbą ryb złowionych w ramach połowu jest róWnież racjonalna. Czym częściej przeprowadzane i czym większe są połowy, tym mniej ryb potencjalnie pozostaje w regionie na kolejne połowy. 
+
+
+#### Korelacja między `cumf`, a `totaln`
+
+```{r cumf_totaln_correlation, cache=TRUE}
+plot.correlation(sample.df, sample.df$cumf, sample.df$totaln, 'cumf', 'totaln')
+```
+
+Na podstawie wykresu można zauważyć średnia zależność pomiędzy parametrami.
+
+Zależność pomiędzy natężeniem połowów w regionie oraz łączną liczbą ryb złowionych w ramach połowu jest róWnież racjonalna. Czym częściej przeprowadzane i czym większe są połowy, tym mniej ryb potencjalnie pozostaje w regionie na kolejne połowy. 
+
+#### Korelacja między `sst`, a `nao`
+
+```{r sst_nao_correlation, cache=TRUE}
+plot.correlation(sample.df, sample.df$sst, sample.df$nao, 'sst', 'nao')
+```
+
+Na podstawie wykresu można zauważyć średnia zależność pomiędzy parametrami.
+
+Oscylacja północnoatlantycka wpływa na cyrkulacje powietrza oraz wody oceanicznej, co faktycznie może miec możliwość wpływu na temperature przy powierzchni wody.
+
+```{r time_chart, cache=TRUE}
+p <- df %>%
+  sample_n(1000) %>%
+  arrange(xmonth) %>%
+  ggplot(
+    aes(x=sst, y=nao)
+  ) + 
+  geom_point() +
+  transition_time(xmonth) + 
+  labs(title = "Month: {frame_time}")
+animate(p, fps=3)
+```
+
+
+```{r sst_cors}
+winter_correlation <- df %>%
+  filter(xmonth < 3 | xmonth > 11) %>%
+  select(sst, nao) %>%
+  cor()
+summer_correlation <- df %>%
+  filter(xmonth > 5 & xmonth < 9) %>%
+  select(sst, nao) %>%
+  cor()
+```
+
+Ciekawą obserwacją jest fakt, że w miesiącach zimowych (listopad-luty), wartość korelacji jest większa od wartości w miesiącach letnich (czerwiec-sierpień) `r winter_correlation['sst', 'nao']` > `r summer_correlation['sst', 'nao']`.
+
 ## Przewidywanie rozmiaru śledzia
+
+```{r train, cache=TRUE, include=FALSE}
+trainingIndex <- createDataPartition(y=df$length, p=0.75, list = FALSE)
+
+data <- df %>% select(length, sal)
+
+training <- data[trainingIndex,]
+testing <- data[-trainingIndex,]
+rfGrid <- expand.grid(mtry = 10:30)
+ctrl <- trainControl(method="repeatedcv", number=2, repeats=5)
+fit <- train (length ~ ., data = training, method='rf', trControl=ctrl, tuneGrid = rfGrid, ntree=30)
+```
+
+```{r prediction}
+rfClasses <- predict(fit, newdata=testing)
+```
 
 # Wnioski
